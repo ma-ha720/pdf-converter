@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>分析レポート PDF化ツール</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Dexie.js -->
+    <script src="https://unpkg.com/dexie@latest/dist/dexie.min.js"></script>
+    
+    <!-- html2pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .input-section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            height: 25vh;
+            padding: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 12px;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            min-height: 48px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:active {
+            background: #e0e0e0;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .history-section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .history-header {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-card {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+
+        .history-date {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 12px;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            flex: 1;
+            min-height: 40px;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .btn-download {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #f44336;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: 'Noto Sans JP', sans-serif;
+            margin-bottom: 16px;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: calc(20px + env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 90%;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* PDF content styling */
+        .pdf-content {
+            font-family: 'Noto Sans JP', sans-serif;
+            padding: 40px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .pdf-content h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .pdf-content h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: #667eea;
+        }
+
+        .pdf-content h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+
+        .pdf-content p {
+            margin-bottom: 12px;
+        }
+
+        .pdf-content ul, .pdf-content ol {
+            margin-left: 24px;
+            margin-bottom: 12px;
+        }
+
+        .pdf-content li {
+            margin-bottom: 8px;
+        }
+
+        .pdf-content strong {
+            font-weight: 700;
+            color: #333;
+        }
+
+        .pdf-content hr {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 24px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📄 分析レポート PDF化</h1>
+            <p class="subtitle">Gemの分析結果を簡単にPDF保存</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="input-section">
+            <textarea id="textInput" placeholder="ここにGemの分析結果を貼り付けます..."></textarea>
+            <button class="btn btn-primary" id="pasteBtn">
+                <i data-lucide="clipboard"></i>
+                クリップボードから貼り付け
+            </button>
+            <button class="btn btn-secondary" id="convertBtn" disabled>
+                <i data-lucide="file-text"></i>
+                PDF化して保存
+            </button>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section">
+            <div class="history-header">
+                <i data-lucide="archive"></i>
+                保存済みPDF
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <p>まだPDFが保存されていません</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Title Edit Modal -->
+    <div class="modal" id="titleModal">
+        <div class="modal-content">
+            <div class="modal-header">タイトルを編集</div>
+            <input type="text" class="modal-input" id="titleInput" placeholder="PDFのタイトルを入力">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelBtn" style="flex: 1;">キャンセル</button>
+                <button class="btn btn-primary" id="confirmBtn" style="flex: 1;">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <i data-lucide="check-circle"></i>
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        // IndexedDB setup
+        const db = new Dexie('PDFStorage');
+        db.version(1).stores({
+            pdfs: '++id, title, date, data'
+        });
+
+        // DOM elements
+        const textInput = document.getElementById('textInput');
+        const pasteBtn = document.getElementById('pasteBtn');
+        const convertBtn = document.getElementById('convertBtn');
+        const historyList = document.getElementById('historyList');
+        const titleModal = document.getElementById('titleModal');
+        const titleInput = document.getElementById('titleInput');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const toast = document.getElementById('toast');
+
+        let currentText = '';
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Paste from clipboard
+        pasteBtn.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                textInput.value = text;
+                currentText = text;
+                convertBtn.disabled = false;
+                showToast('テキストを貼り付けました');
+            } catch (err) {
+                showToast('クリップボードの読み取りに失敗しました。もう一度お試しください。');
+            }
+        });
+
+        // Text input change
+        textInput.addEventListener('input', () => {
+            currentText = textInput.value;
+            convertBtn.disabled = currentText.trim() === '';
+        });
+
+        // Convert to PDF
+        convertBtn.addEventListener('click', () => {
+            if (!currentText.trim()) {
+                showToast('テキストが入力されていません');
+                return;
+            }
+
+            // Extract title (first line, max 50 chars)
+            const firstLine = currentText.split('\n')[0].trim();
+            const autoTitle = firstLine.substring(0, 50) + (firstLine.length > 50 ? '...' : '');
+            
+            titleInput.value = autoTitle;
+            titleModal.classList.add('active');
+        });
+
+        // Cancel button
+        cancelBtn.addEventListener('click', () => {
+            titleModal.classList.remove('active');
+        });
+
+        // Confirm and save PDF
+        confirmBtn.addEventListener('click', async () => {
+            const title = titleInput.value.trim() || '無題のレポート';
+            titleModal.classList.remove('active');
+
+            try {
+                showToast('PDF生成中...');
+                
+                // Convert markdown-like text to HTML
+                const htmlContent = convertToHTML(currentText);
+                
+                // Generate PDF
+                const element = document.createElement('div');
+                element.className = 'pdf-content';
+                element.innerHTML = htmlContent;
+                
+                const opt = {
+                    margin: 15,
+                    filename: `${title}.pdf`,
+                    image: { type: 'jpeg', quality: 0.5 },
+                    html2canvas: { scale: 1 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
+                
+                // Save to IndexedDB
+                await db.pdfs.add({
+                    title: title,
+                    date: new Date().toISOString(),
+                    data: pdfBlob
+                });
+
+                showToast('✓ PDF保存完了');
+                textInput.value = '';
+                currentText = '';
+                convertBtn.disabled = true;
+                loadHistory();
+            } catch (err) {
+                console.error(err);
+                showToast('PDF生成に失敗しました。もう一度最初からお試しください。');
+            }
+        });
+
+        // Convert text to HTML with basic markdown support
+        function convertToHTML(text) {
+            let html = text
+                // Escape HTML
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                // Headers
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                // Bold
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                // Horizontal rules
+                .replace(/^---+$/gm, '<hr>')
+                // Lists (basic)
+                .replace(/^\* (.+)$/gm, '<li>$1</li>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                // Paragraphs
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+
+            // Wrap in paragraph tags
+            html = '<p>' + html + '</p>';
+            
+            // Wrap lists
+            html = html.replace(/(<li>.+?<\/li>)/gs, '<ul>$1</ul>');
+            
+            return html;
+        }
+
+        // Load history
+        async function loadHistory() {
+            const pdfs = await db.pdfs.orderBy('date').reverse().toArray();
+            
+            if (pdfs.length === 0) {
+                historyList.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <p>まだPDFが保存されていません</p>
+                    </div>
+                `;
+                return;
+            }
+
+            historyList.innerHTML = pdfs.map(pdf => `
+                <div class="history-card">
+                    <div class="history-title">${pdf.title}</div>
+                    <div class="history-date">${new Date(pdf.date).toLocaleString('ja-JP')}</div>
+                    <div class="history-actions">
+                        <button class="btn btn-small btn-download" onclick="downloadPDF(${pdf.id})">
+                            <i data-lucide="download"></i>
+                            ダウンロード
+                        </button>
+                        <button class="btn btn-small btn-delete" onclick="deletePDF(${pdf.id})">
+                            <i data-lucide="trash-2"></i>
+                            削除
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // Download PDF
+        async function downloadPDF(id) {
+            const pdf = await db.pdfs.get(id);
+            const url = URL.createObjectURL(pdf.data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${pdf.title}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('ダウンロードしました');
+        }
+
+        // Delete PDF
+        async function deletePDF(id) {
+            if (confirm('このPDFを削除しますか？')) {
+                await db.pdfs.delete(id);
+                showToast('削除しました');
+                loadHistory();
+            }
+        }
+
+        // Show toast
+        function showToast(message) {
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize
+        loadHistory();
+
+        // Make functions global
+        window.downloadPDF = downloadPDF;
+        window.deletePDF = deletePDF;
+    </script>
+</body>
+</html>
