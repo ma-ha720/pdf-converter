@@ -827,36 +827,38 @@
                 return;
             }
 
-            // Determine button based on device
-            const actionButton = canShare ? `
-                <button class="btn btn-small btn-share" onclick="sharePDF(${pdf.id})">
-                    <i data-lucide="share-2"></i>
-                    共有
-                </button>
-            ` : `
-                <button class="btn btn-small btn-download" onclick="downloadPDF(${pdf.id})">
-                    <i data-lucide="download"></i>
-                    ダウンロード
-                </button>
-            `;
+            historyList.innerHTML = pdfs.map(pdf => {
+                // Determine button based on device (moved inside map)
+                const actionButton = canShare ? `
+                    <button class="btn btn-small btn-share" onclick="sharePDF(${pdf.id})">
+                        <i data-lucide="share-2"></i>
+                        共有
+                    </button>
+                ` : `
+                    <button class="btn btn-small btn-download" onclick="downloadPDF(${pdf.id})">
+                        <i data-lucide="download"></i>
+                        ダウンロード
+                    </button>
+                `;
 
-            historyList.innerHTML = pdfs.map(pdf => `
-                <div class="history-card">
-                    <div class="history-title">${pdf.title}</div>
-                    <div class="history-date">${new Date(pdf.date).toLocaleString('ja-JP')}</div>
-                    <div class="history-actions">
-                        <button class="btn btn-small btn-view" onclick="viewPDF(${pdf.id})">
-                            <i data-lucide="eye"></i>
-                            内容を確認
-                        </button>
-                        ${actionButton}
-                        <button class="btn btn-small btn-delete" onclick="deletePDF(${pdf.id})">
-                            <i data-lucide="trash-2"></i>
-                            削除
-                        </button>
+                return `
+                    <div class="history-card">
+                        <div class="history-title">${pdf.title}</div>
+                        <div class="history-date">${new Date(pdf.date).toLocaleString('ja-JP')}</div>
+                        <div class="history-actions">
+                            <button class="btn btn-small btn-view" onclick="viewPDF(${pdf.id})">
+                                <i data-lucide="eye"></i>
+                                内容を確認
+                            </button>
+                            ${actionButton}
+                            <button class="btn btn-small btn-delete" onclick="deletePDF(${pdf.id})">
+                                <i data-lucide="trash-2"></i>
+                                削除
+                            </button>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             lucide.createIcons();
         }
