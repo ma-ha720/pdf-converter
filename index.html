@@ -20,6 +20,9 @@
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -410,42 +413,80 @@
             padding: 40px;
             line-height: 1.8;
             color: #333;
+            font-size: 12px;
         }
 
         .pdf-content h1 {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 700;
-            margin-bottom: 24px;
-            padding-bottom: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
             border-bottom: 3px solid #667eea;
+            page-break-after: avoid;
         }
 
         .pdf-content h2 {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
-            margin-top: 32px;
-            margin-bottom: 16px;
+            margin-top: 28px;
+            margin-bottom: 14px;
             color: #667eea;
+            page-break-after: avoid;
         }
 
         .pdf-content h3 {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
-            margin-top: 24px;
-            margin-bottom: 12px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            page-break-after: avoid;
+        }
+
+        .pdf-content h4 {
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            page-break-after: avoid;
         }
 
         .pdf-content p {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
+            line-height: 1.7;
         }
 
         .pdf-content ul, .pdf-content ol {
-            margin-left: 24px;
+            margin-left: 20px;
             margin-bottom: 12px;
         }
 
+        .pdf-content ul {
+            list-style-type: disc;
+        }
+
+        .pdf-content ul ul {
+            list-style-type: circle;
+            margin-left: 20px;
+            margin-top: 6px;
+        }
+
+        .pdf-content ul ul ul {
+            list-style-type: square;
+        }
+
+        .pdf-content ol {
+            list-style-type: decimal;
+        }
+
+        .pdf-content ol ol {
+            list-style-type: lower-alpha;
+            margin-left: 20px;
+            margin-top: 6px;
+        }
+
         .pdf-content li {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            line-height: 1.6;
         }
 
         .pdf-content strong {
@@ -453,10 +494,80 @@
             color: #333;
         }
 
+        .pdf-content em {
+            font-style: italic;
+        }
+
         .pdf-content hr {
             border: none;
             border-top: 1px solid #e0e0e0;
-            margin: 24px 0;
+            margin: 20px 0;
+        }
+
+        .pdf-content blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 16px;
+            margin: 16px 0;
+            color: #555;
+            font-style: italic;
+        }
+
+        .pdf-content code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .pdf-content pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .pdf-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .pdf-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 11px;
+        }
+
+        .pdf-content table th,
+        .pdf-content table td {
+            border: 1px solid #ddd;
+            padding: 8px 10px;
+            text-align: left;
+        }
+
+        .pdf-content table th {
+            background-color: #667eea;
+            color: white;
+            font-weight: 700;
+        }
+
+        .pdf-content table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .pdf-content table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .pdf-content a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .pdf-content a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -547,6 +658,13 @@
         // PDF.js worker setup
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+        // Configure marked.js
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            tables: true
+        });
+
         // IndexedDB setup
         const db = new Dexie('PDFStorage');
         db.version(1).stores({
@@ -601,8 +719,8 @@
                 return;
             }
 
-            // Extract title (first line, max 50 chars)
-            const firstLine = currentText.split('\n')[0].trim();
+            // Extract title (first line, max 50 chars, remove markdown)
+            const firstLine = currentText.split('\n')[0].trim().replace(/^#+\s*/, '');
             const autoTitle = firstLine.substring(0, 50) + (firstLine.length > 50 ? '...' : '');
             
             titleInput.value = autoTitle;
@@ -622,8 +740,8 @@
             try {
                 showToast('PDF生成中...');
                 
-                // Convert markdown-like text to HTML
-                const htmlContent = convertToHTML(currentText);
+                // Convert markdown to HTML using marked.js
+                const htmlContent = marked.parse(currentText);
                 
                 // Generate PDF
                 const element = document.createElement('div');
@@ -634,8 +752,9 @@
                     margin: 15,
                     filename: `${title}.pdf`,
                     image: { type: 'jpeg', quality: 0.5 },
-                    html2canvas: { scale: 1 },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    html2canvas: { scale: 1.5 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
                 };
 
                 const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
@@ -657,37 +776,6 @@
                 showToast('PDF生成に失敗しました。もう一度最初からお試しください。');
             }
         });
-
-        // Convert text to HTML with basic markdown support
-        function convertToHTML(text) {
-            let html = text
-                // Escape HTML
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                // Headers
-                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-                // Bold
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                // Horizontal rules
-                .replace(/^---+$/gm, '<hr>')
-                // Lists (basic)
-                .replace(/^\* (.+)$/gm, '<li>$1</li>')
-                .replace(/^- (.+)$/gm, '<li>$1</li>')
-                // Paragraphs
-                .replace(/\n\n/g, '</p><p>')
-                .replace(/\n/g, '<br>');
-
-            // Wrap in paragraph tags
-            html = '<p>' + html + '</p>';
-            
-            // Wrap lists
-            html = html.replace(/(<li>.+?<\/li>)/gs, '<ul>$1</ul>');
-            
-            return html;
-        }
 
         // Load history
         async function loadHistory() {
