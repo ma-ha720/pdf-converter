@@ -17,6 +17,9 @@
     <!-- html2pdf.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -169,18 +172,24 @@
         }
 
         .history-actions {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
         }
 
         .btn-small {
-            flex: 1;
             min-height: 40px;
             padding: 10px;
             font-size: 14px;
         }
 
-        .btn-download {
+        .btn-view {
+            background: #2196F3;
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .btn-share {
             background: #4CAF50;
             color: white;
         }
@@ -255,6 +264,121 @@
             gap: 8px;
         }
 
+        /* PDF Preview Modal */
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            overflow-y: auto;
+        }
+
+        .preview-modal.active {
+            display: block;
+        }
+
+        .preview-header {
+            position: sticky;
+            top: 0;
+            background: #333;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 2001;
+        }
+
+        .preview-title {
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .close-preview {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .preview-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .pdf-viewer {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .pdf-page {
+            width: 100%;
+            display: block;
+        }
+
+        .upload-guide {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .upload-guide h3 {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-steps {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .upload-steps li {
+            counter-increment: step-counter;
+            margin-bottom: 16px;
+            padding-left: 40px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .upload-steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #667eea;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .share-button-preview {
+            background: #4CAF50;
+            color: white;
+            width: 100%;
+            margin-top: 16px;
+        }
+
         /* Toast */
         .toast {
             position: fixed;
@@ -266,7 +390,7 @@
             padding: 16px 24px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            z-index: 2000;
+            z-index: 3000;
             opacity: 0;
             transition: all 0.3s;
             display: flex;
@@ -384,6 +508,35 @@
         </div>
     </div>
 
+    <!-- PDF Preview Modal -->
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-header">
+            <span class="preview-title" id="previewTitle"></span>
+            <button class="close-preview" id="closePreview">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="preview-content">
+            <div class="pdf-viewer" id="pdfViewer"></div>
+            
+            <div class="upload-guide">
+                <h3>
+                    <i data-lucide="upload"></i>
+                    Geminiへのアップロード方法
+                </h3>
+                <ol class="upload-steps">
+                    <li>画面下部の「共有」ボタンをタップ</li>
+                    <li>スマホの共有メニューから「ファイルに保存」を選択</li>
+                    <li>保存したファイルを指定のGemにアップロード</li>
+                </ol>
+                <button class="btn btn-primary share-button-preview" id="shareFromPreview">
+                    <i data-lucide="share-2"></i>
+                    共有する
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast">
         <i data-lucide="check-circle"></i>
@@ -391,6 +544,9 @@
     </div>
 
     <script>
+        // PDF.js worker setup
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         // IndexedDB setup
         const db = new Dexie('PDFStorage');
         db.version(1).stores({
@@ -406,9 +562,15 @@
         const titleInput = document.getElementById('titleInput');
         const cancelBtn = document.getElementById('cancelBtn');
         const confirmBtn = document.getElementById('confirmBtn');
+        const previewModal = document.getElementById('previewModal');
+        const previewTitle = document.getElementById('previewTitle');
+        const pdfViewer = document.getElementById('pdfViewer');
+        const closePreview = document.getElementById('closePreview');
+        const shareFromPreview = document.getElementById('shareFromPreview');
         const toast = document.getElementById('toast');
 
         let currentText = '';
+        let currentPreviewPDF = null;
 
         // Initialize Lucide icons
         lucide.createIcons();
@@ -546,9 +708,13 @@
                     <div class="history-title">${pdf.title}</div>
                     <div class="history-date">${new Date(pdf.date).toLocaleString('ja-JP')}</div>
                     <div class="history-actions">
-                        <button class="btn btn-small btn-download" onclick="downloadPDF(${pdf.id})">
-                            <i data-lucide="download"></i>
-                            ダウンロード
+                        <button class="btn btn-small btn-view" onclick="viewPDF(${pdf.id})">
+                            <i data-lucide="eye"></i>
+                            内容を確認
+                        </button>
+                        <button class="btn btn-small btn-share" onclick="sharePDF(${pdf.id})">
+                            <i data-lucide="share-2"></i>
+                            共有
                         </button>
                         <button class="btn btn-small btn-delete" onclick="deletePDF(${pdf.id})">
                             <i data-lucide="trash-2"></i>
@@ -561,16 +727,87 @@
             lucide.createIcons();
         }
 
-        // Download PDF
-        async function downloadPDF(id) {
+        // View PDF
+        async function viewPDF(id) {
             const pdf = await db.pdfs.get(id);
-            const url = URL.createObjectURL(pdf.data);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${pdf.title}.pdf`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('ダウンロードしました');
+            currentPreviewPDF = pdf;
+            
+            previewTitle.textContent = pdf.title;
+            pdfViewer.innerHTML = '<p style="text-align: center; padding: 20px;">PDF読み込み中...</p>';
+            previewModal.classList.add('active');
+            
+            try {
+                const arrayBuffer = await pdf.data.arrayBuffer();
+                const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+                const pdfDoc = await loadingTask.promise;
+                
+                pdfViewer.innerHTML = '';
+                
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    const page = await pdfDoc.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: 1.5 });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    canvas.className = 'pdf-page';
+                    
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise;
+                    
+                    pdfViewer.appendChild(canvas);
+                }
+                
+                lucide.createIcons();
+            } catch (err) {
+                console.error(err);
+                pdfViewer.innerHTML = '<p style="text-align: center; padding: 20px; color: #f44336;">PDFの読み込みに失敗しました</p>';
+            }
+        }
+
+        // Close preview
+        closePreview.addEventListener('click', () => {
+            previewModal.classList.remove('active');
+            currentPreviewPDF = null;
+        });
+
+        // Share from preview
+        shareFromPreview.addEventListener('click', () => {
+            if (currentPreviewPDF) {
+                sharePDF(currentPreviewPDF.id);
+            }
+        });
+
+        // Share PDF
+        async function sharePDF(id) {
+            const pdf = await db.pdfs.get(id);
+            
+            try {
+                const file = new File([pdf.data], `${pdf.title}.pdf`, { type: 'application/pdf' });
+                
+                if (navigator.share && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: pdf.title
+                    });
+                    showToast('共有しました');
+                } else {
+                    // Fallback: download
+                    const url = URL.createObjectURL(pdf.data);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${pdf.title}.pdf`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('ダウンロードしました（共有機能が利用できません）');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('共有に失敗しました');
+            }
         }
 
         // Delete PDF
@@ -595,7 +832,8 @@
         loadHistory();
 
         // Make functions global
-        window.downloadPDF = downloadPDF;
+        window.viewPDF = viewPDF;
+        window.sharePDF = sharePDF;
         window.deletePDF = deletePDF;
     </script>
 </body>
