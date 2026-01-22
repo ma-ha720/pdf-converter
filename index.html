@@ -435,57 +435,57 @@
             transform: translateX(-50%) translateY(0);
         }
 
-        /* PDF content styling */
+        /* PDF content styling - OPTIMIZED */
         .pdf-content {
             font-family: 'Noto Sans JP', sans-serif;
-            padding: 40px;
-            line-height: 1.8;
+            padding: 20mm;
+            line-height: 1.6;
             color: #333;
-            font-size: 12px;
+            font-size: 11pt;
         }
 
         .pdf-content h1 {
-            font-size: 22px;
+            font-size: 18pt;
             font-weight: 700;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #667eea;
+            margin-bottom: 12pt;
+            padding-bottom: 6pt;
+            border-bottom: 2px solid #667eea;
             page-break-after: avoid;
         }
 
         .pdf-content h2 {
-            font-size: 18px;
+            font-size: 14pt;
             font-weight: 700;
-            margin-top: 28px;
-            margin-bottom: 14px;
+            margin-top: 16pt;
+            margin-bottom: 8pt;
             color: #667eea;
             page-break-after: avoid;
         }
 
         .pdf-content h3 {
-            font-size: 15px;
+            font-size: 12pt;
             font-weight: 700;
-            margin-top: 20px;
-            margin-bottom: 10px;
+            margin-top: 12pt;
+            margin-bottom: 6pt;
             page-break-after: avoid;
         }
 
         .pdf-content h4 {
-            font-size: 13px;
+            font-size: 11pt;
             font-weight: 700;
-            margin-top: 16px;
-            margin-bottom: 8px;
+            margin-top: 10pt;
+            margin-bottom: 4pt;
             page-break-after: avoid;
         }
 
         .pdf-content p {
-            margin-bottom: 10px;
+            margin-bottom: 8pt;
             line-height: 1.7;
         }
 
         .pdf-content ul, .pdf-content ol {
-            margin-left: 20px;
-            margin-bottom: 12px;
+            margin-left: 16pt;
+            margin-bottom: 8pt;
         }
 
         .pdf-content ul {
@@ -494,8 +494,8 @@
 
         .pdf-content ul ul {
             list-style-type: circle;
-            margin-left: 20px;
-            margin-top: 6px;
+            margin-left: 16pt;
+            margin-top: 4pt;
         }
 
         .pdf-content ul ul ul {
@@ -508,12 +508,12 @@
 
         .pdf-content ol ol {
             list-style-type: lower-alpha;
-            margin-left: 20px;
-            margin-top: 6px;
+            margin-left: 16pt;
+            margin-top: 4pt;
         }
 
         .pdf-content li {
-            margin-bottom: 6px;
+            margin-bottom: 4pt;
             line-height: 1.6;
         }
 
@@ -529,31 +529,31 @@
         .pdf-content hr {
             border: none;
             border-top: 1px solid #e0e0e0;
-            margin: 20px 0;
+            margin: 12pt 0;
         }
 
         .pdf-content blockquote {
-            border-left: 4px solid #667eea;
-            padding-left: 16px;
-            margin: 16px 0;
+            border-left: 3px solid #667eea;
+            padding-left: 12pt;
+            margin: 10pt 0;
             color: #555;
             font-style: italic;
         }
 
         .pdf-content code {
             background: #f5f5f5;
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 2pt 4pt;
+            border-radius: 3pt;
             font-family: 'Courier New', monospace;
-            font-size: 11px;
+            font-size: 10pt;
         }
 
         .pdf-content pre {
             background: #f5f5f5;
-            padding: 12px;
-            border-radius: 6px;
+            padding: 10pt;
+            border-radius: 4pt;
             overflow-x: auto;
-            margin: 12px 0;
+            margin: 8pt 0;
         }
 
         .pdf-content pre code {
@@ -564,14 +564,14 @@
         .pdf-content table {
             width: 100%;
             border-collapse: collapse;
-            margin: 16px 0;
-            font-size: 11px;
+            margin: 10pt 0;
+            font-size: 10pt;
         }
 
         .pdf-content table th,
         .pdf-content table td {
             border: 1px solid #ddd;
-            padding: 8px 10px;
+            padding: 6pt 8pt;
             text-align: left;
         }
 
@@ -583,10 +583,6 @@
 
         .pdf-content table tr:nth-child(even) {
             background-color: #f9f9f9;
-        }
-
-        .pdf-content table tr:hover {
-            background-color: #f5f5f5;
         }
 
         .pdf-content a {
@@ -786,10 +782,10 @@
                 element.innerHTML = htmlContent;
                 
                 const opt = {
-                    margin: 15,
+                    margin: 10,
                     filename: `${title}.pdf`,
-                    image: { type: 'jpeg', quality: 0.5 },
-                    html2canvas: { scale: 1.5 },
+                    image: { type: 'jpeg', quality: 0.6 },
+                    html2canvas: { scale: 2 },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
                 };
