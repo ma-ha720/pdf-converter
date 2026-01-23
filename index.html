@@ -435,7 +435,7 @@
             transform: translateX(-50%) translateY(0);
         }
 
-        /* PDF content styling - OPTIMIZED */
+        /* PDF content styling - OPTIMIZED WITH BETTER PAGE BREAKS */
         .pdf-content {
             font-family: 'Noto Sans JP', sans-serif;
             padding: 20mm;
@@ -451,6 +451,7 @@
             padding-bottom: 6pt;
             border-bottom: 2px solid #667eea;
             page-break-after: avoid;
+            page-break-inside: avoid;
         }
 
         .pdf-content h2 {
@@ -460,6 +461,7 @@
             margin-bottom: 8pt;
             color: #667eea;
             page-break-after: avoid;
+            page-break-inside: avoid;
         }
 
         .pdf-content h3 {
@@ -468,6 +470,7 @@
             margin-top: 12pt;
             margin-bottom: 6pt;
             page-break-after: avoid;
+            page-break-inside: avoid;
         }
 
         .pdf-content h4 {
@@ -476,16 +479,28 @@
             margin-top: 10pt;
             margin-bottom: 4pt;
             page-break-after: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* Keep heading with next paragraph */
+        .pdf-content h1 + p,
+        .pdf-content h2 + p,
+        .pdf-content h3 + p,
+        .pdf-content h4 + p {
+            page-break-before: avoid;
         }
 
         .pdf-content p {
             margin-bottom: 8pt;
             line-height: 1.7;
+            orphans: 3;
+            widows: 3;
         }
 
         .pdf-content ul, .pdf-content ol {
             margin-left: 16pt;
             margin-bottom: 8pt;
+            page-break-inside: avoid;
         }
 
         .pdf-content ul {
@@ -530,6 +545,7 @@
             border: none;
             border-top: 1px solid #e0e0e0;
             margin: 12pt 0;
+            page-break-after: avoid;
         }
 
         .pdf-content blockquote {
@@ -538,6 +554,7 @@
             margin: 10pt 0;
             color: #555;
             font-style: italic;
+            page-break-inside: avoid;
         }
 
         .pdf-content code {
@@ -554,6 +571,7 @@
             border-radius: 4pt;
             overflow-x: auto;
             margin: 8pt 0;
+            page-break-inside: avoid;
         }
 
         .pdf-content pre code {
@@ -566,6 +584,7 @@
             border-collapse: collapse;
             margin: 10pt 0;
             font-size: 10pt;
+            page-break-inside: avoid;
         }
 
         .pdf-content table th,
@@ -787,7 +806,7 @@
                     image: { type: 'jpeg', quality: 0.6 },
                     html2canvas: { scale: 2 },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                    pagebreak: { mode: 'css', before: '.page-break' }
                 };
 
                 const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
